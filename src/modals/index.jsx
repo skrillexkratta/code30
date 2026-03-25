@@ -189,6 +189,116 @@ export function CertificateModal({ userName, course, onClose }) {
   );
 }
 
+// ── Program Certificate Modal ─────────────────────────────────────────────────
+export function ProgramCertificateModal({ userName, onClose }) {
+  const canvasRef = useRef(null);
+  const today = new Date().toLocaleDateString("en-GB", { year: "numeric", month: "long", day: "numeric" });
+
+  useEffect(() => {
+    const canvas = canvasRef.current; if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    const W = canvas.width, H = canvas.height;
+
+    // Background
+    const bg = ctx.createLinearGradient(0, 0, W, H);
+    bg.addColorStop(0, "#040810"); bg.addColorStop(1, "#0a1428");
+    ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+
+    // Cyan glow top-left
+    const glowL = ctx.createRadialGradient(0, 0, 0, 0, 0, 360);
+    glowL.addColorStop(0, "rgba(77,240,255,0.12)"); glowL.addColorStop(1, "transparent");
+    ctx.fillStyle = glowL; ctx.fillRect(0, 0, W, H);
+
+    // Magenta glow bottom-right
+    const glowR = ctx.createRadialGradient(W, H, 0, W, H, 360);
+    glowR.addColorStop(0, "rgba(224,64,251,0.10)"); glowR.addColorStop(1, "transparent");
+    ctx.fillStyle = glowR; ctx.fillRect(0, 0, W, H);
+
+    // Outer border
+    ctx.strokeStyle = "rgba(77,240,255,0.35)"; ctx.lineWidth = 2;
+    ctx.strokeRect(20, 20, W - 40, H - 40);
+    // Inner border
+    ctx.strokeStyle = "rgba(77,240,255,0.12)"; ctx.lineWidth = 1;
+    ctx.strokeRect(30, 30, W - 60, H - 60);
+
+    // Trophy
+    ctx.font = "52px serif"; ctx.textAlign = "center";
+    ctx.fillText("🏆", W / 2, 110);
+
+    // "Certificate of Completion"
+    ctx.font = "bold 13px Arial"; ctx.fillStyle = "#4df0ff";
+    ctx.letterSpacing = "3px";
+    ctx.fillText("CERTIFICATE OF COMPLETION", W / 2, 148);
+
+    // Divider line
+    ctx.strokeStyle = "rgba(77,240,255,0.25)"; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(W / 2 - 180, 162); ctx.lineTo(W / 2 + 180, 162); ctx.stroke();
+
+    // "This certifies that"
+    ctx.font = "14px Arial"; ctx.fillStyle = "rgba(255,255,255,0.45)";
+    ctx.fillText("This certifies that", W / 2, 192);
+
+    // Student name
+    const nameGrad = ctx.createLinearGradient(W / 2 - 180, 0, W / 2 + 180, 0);
+    nameGrad.addColorStop(0, "#4df0ff"); nameGrad.addColorStop(1, "#e040fb");
+    ctx.font = "bold 36px Arial"; ctx.fillStyle = nameGrad;
+    ctx.fillText(userName || "Graduate", W / 2, 238);
+
+    // Underline
+    ctx.strokeStyle = "rgba(77,240,255,0.3)"; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(W / 2 - 185, 252); ctx.lineTo(W / 2 + 185, 252); ctx.stroke();
+
+    // "has successfully completed"
+    ctx.font = "14px Arial"; ctx.fillStyle = "rgba(255,255,255,0.45)";
+    ctx.fillText("has successfully completed the", W / 2, 280);
+
+    // Program name
+    ctx.font = "bold 20px Arial"; ctx.fillStyle = "#ffffff";
+    ctx.fillText("AI Automation Builder Program", W / 2, 312);
+
+    // Module list
+    ctx.font = "12px Arial"; ctx.fillStyle = "rgba(255,255,255,0.35)";
+    ctx.fillText("AI Chatbot  ·  Content Generator  ·  Email Automation", W / 2, 336);
+
+    // Stars
+    ctx.font = "16px serif"; ctx.fillStyle = "#fbbf24";
+    ctx.fillText("★  ★  ★  ★  ★", W / 2, 368);
+
+    // Date
+    ctx.font = "11px Arial"; ctx.fillStyle = "rgba(255,255,255,0.25)";
+    ctx.fillText(today, W / 2, 400);
+
+    // AI Builder brand
+    ctx.font = "bold 11px Arial"; ctx.fillStyle = "rgba(77,240,255,0.4)";
+    ctx.fillText("AI BUILDER", W / 2, 420);
+  }, [userName, today]);
+
+  const download = () => {
+    const a = document.createElement("a");
+    a.download = `ai-builder-certificate-${(userName || "graduate").replace(/\s+/g, "-").toLowerCase()}.png`;
+    a.href = canvasRef.current.toDataURL();
+    a.click();
+  };
+
+  return (
+    <ModalShell onClose={onClose} maxWidth={620} label="Certificate of Completion">
+      <ModalHeader title="Certificate of Completion" subtitle="🎉 You finished the program!" onClose={onClose} />
+      <canvas
+        ref={canvasRef} width={576} height={440}
+        style={{ width: "100%", borderRadius: "var(--r-lg)", border: "1px solid rgba(77,240,255,0.25)" }}
+        role="img"
+        aria-label={`Certificate of Completion for ${userName || "Graduate"} — AI Automation Builder Program`}
+      />
+      <div className="btn-row mt-4" style={{ justifyContent: "center" }}>
+        <button onClick={download} className="btn btn-primary">
+          <Download size={14} /> Download Certificate
+        </button>
+        <button onClick={onClose} className="btn btn-dark">Close</button>
+      </div>
+    </ModalShell>
+  );
+}
+
 // ── Checkout Modal ────────────────────────────────────────────────────────────
 export function CheckoutModal({ items, total, onClose, onPay }) {
   const { t } = useTranslation();

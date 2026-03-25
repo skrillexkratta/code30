@@ -1,13 +1,15 @@
 import { useState } from "react";
-import { ArrowRight, BookOpen, Lock, LogOut, User, Zap } from "lucide-react";
+import { ArrowRight, Award, BookOpen, Lock, LogOut, User, Zap } from "lucide-react";
 import { ProgressBar } from "../components/UI";
 import { useAuth } from "../hooks/useAuth";
 import { modules, PROGRAM_ID } from "../aiProgram";
 import { UserMenu } from "../AuthModal";
+import { ProgramCertificateModal } from "../modals/index";
 
 export function Dashboard({ onStartModule, onGoToLanding }) {
   const { user, logout, ownedCourses, progress } = useAuth();
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showCert,     setShowCert]     = useState(false);
 
   const hasPurchased = ownedCourses.includes(PROGRAM_ID) || ownedCourses.length > 0;
 
@@ -40,6 +42,7 @@ export function Dashboard({ onStartModule, onGoToLanding }) {
   return (
     <div style={{ minHeight: "100vh", background: "var(--bg)", color: "var(--text)" }}>
       {showUserMenu && <UserMenu onClose={() => setShowUserMenu(false)} />}
+      {showCert && <ProgramCertificateModal userName={user?.name || ""} onClose={() => setShowCert(false)} />}
 
       {/* ── Header ──────────────────────────────────────────────────────── */}
       <header style={{ borderBottom: "1px solid var(--border)", padding: "0 24px" }}>
@@ -93,8 +96,21 @@ export function Dashboard({ onStartModule, onGoToLanding }) {
           </div>
         ) : (
           <>
+            {/* ── Completion banner ─────────────────────────────────── */}
+            {overallProgress === 100 && (
+              <div className="panel" style={{ marginBottom: 32, borderColor: "rgba(77,240,255,.35)", background: "rgba(77,240,255,.05)", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 16 }}>
+                <div>
+                  <div style={{ fontWeight: 800, fontSize: 18, marginBottom: 4 }}>🎉 Program complete!</div>
+                  <p style={{ color: "var(--text-muted)", fontSize: 14, margin: 0 }}>You finished all 21 lessons. Download your certificate below.</p>
+                </div>
+                <button onClick={() => setShowCert(true)} className="btn btn-primary" style={{ gap: 8, flexShrink: 0 }}>
+                  <Award size={15} /> Get Certificate
+                </button>
+              </div>
+            )}
+
             {/* ── Overall progress bar ──────────────────────────────── */}
-            {completedTotal > 0 && (
+            {completedTotal > 0 && overallProgress < 100 && (
               <div className="panel" style={{ marginBottom: 32, maxWidth: 480 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10 }}>
                   <span style={{ fontWeight: 700 }}>Overall progress</span>
