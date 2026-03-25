@@ -34,6 +34,13 @@
   --r-2xl: 36px;
   --r-pill:999px;
 
+  /* Aliases used by LandingPage */
+  --accent:       #4df0ff;
+  --accent-2:     #e040fb;
+  --text-muted:   #a8b4cc;
+  --text-dim:     #5a6880;
+  --card:         rgba(16, 22, 38, 0.85);
+
   --shadow-card:  0 4px 24px rgba(0,0,0,0.4), 0 1px 0 rgba(255,255,255,0.04) inset;
   --shadow-glow:  0 0 32px var(--cyan-glow), 0 0 80px rgba(77,240,255,0.08);
   --shadow-panel: 0 8px 40px rgba(0,0,0,0.5), 0 0 0 1px var(--border);
