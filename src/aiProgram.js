@@ -3,8 +3,8 @@
 
 export const PROGRAM_ID            = "ai-automation-builder";
 export const PROGRAM_NAME          = "AI Automation Builder Program";
-export const PROGRAM_PRICE_DISPLAY = 997;   // shown on landing page (USD)
-export const PROGRAM_PRICE_CENTS   = 99700; // sent to Stripe
+export const PROGRAM_PRICE_DISPLAY = 29.99; // shown on landing page (USD)
+export const PROGRAM_PRICE_CENTS   = 2999;  // sent to Stripe
 
 // ── Program path (shown on landing page) ──────────────────────────────────────
 export const programPath = [

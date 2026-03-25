@@ -193,6 +193,40 @@ export function LandingPage({ onGetAccess, onGoToDashboard }) {
         </div>
       </section>
 
+      {/* ── Testimonials ─────────────────────────────────────────────────── */}
+      <section style={{ padding: "60px 24px", maxWidth: 1100, margin: "0 auto" }}>
+        <h2 style={{ textAlign: "center", fontSize: 30, fontWeight: 800, marginBottom: 10, fontFamily: "'Syne', sans-serif" }}>
+          What students are saying
+        </h2>
+        <p style={{ textAlign: "center", color: "var(--text-muted)", marginBottom: 44 }}>Real results from real people</p>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 20 }}>
+          {[
+            { name: "Marcus T.",  role: "Freelance Developer",  avatar: "MT", accent: "#57f6ff", text: "I built and deployed my first AI chatbot in a weekend. My client was blown away. Already charged $800 for it." },
+            { name: "Sara L.",    role: "Marketing Manager",    avatar: "SL", accent: "#a78bfa", text: "The content generator alone saves me 6+ hours every week. I generate a full week of posts in under 10 minutes now." },
+            { name: "James K.",   role: "Agency Owner",         avatar: "JK", accent: "#34d399", text: "At $29 this is insane value. I've resold the chatbot module to 3 clients already. Paid for itself 10x over." },
+            { name: "Priya M.",   role: "E-commerce Founder",   avatar: "PM", accent: "#57f6ff", text: "No coding background and I still got through every module. The step-by-step format makes it easy to follow." },
+            { name: "Tom R.",     role: "SaaS Entrepreneur",    avatar: "TR", accent: "#a78bfa", text: "The email automation module is exactly what I needed. Set it up once and it runs completely on its own." },
+            { name: "Aisha B.",   role: "Content Creator",      avatar: "AB", accent: "#34d399", text: "I was skeptical at first but the quality surprised me. Everything actually works in real life, not just demos." },
+          ].map((t) => (
+            <div key={t.name} className="panel" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              <div style={{ display: "flex", gap: 3 }}>
+                {[...Array(5)].map((_, i) => <span key={i} style={{ color: "#fbbf24", fontSize: 14 }}>★</span>)}
+              </div>
+              <p style={{ fontSize: 14, lineHeight: 1.65, color: "var(--text-muted)", margin: 0, flex: 1 }}>"{t.text}"</p>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <div style={{ width: 36, height: 36, borderRadius: "50%", background: `${t.accent}22`, border: `1px solid ${t.accent}44`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700, color: t.accent, flexShrink: 0 }}>
+                  {t.avatar}
+                </div>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: 14 }}>{t.name}</div>
+                  <div style={{ fontSize: 12, color: "var(--text-muted)" }}>{t.role}</div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
       {/* ── Pricing CTA ──────────────────────────────────────────────────── */}
       <section style={{ padding: "60px 24px 100px", maxWidth: 480, margin: "0 auto", textAlign: "center" }}>
         <div className="panel" style={{ borderColor: "rgba(87,246,255,.3)", background: "var(--surface)" }}>

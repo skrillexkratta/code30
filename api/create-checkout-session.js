@@ -28,7 +28,7 @@ module.exports = async function handler(req, res) {
         {
           price_data: {
             currency:     "usd",
-            unit_amount:  99700, // $997.00
+            unit_amount:  2999,  // $29.99
             product_data: {
               name:        "AI Automation Builder Program",
               description: "Build 3 real AI tools: Chatbot, Content Generator & Email Automation. Lifetime access.",
