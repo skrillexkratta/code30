@@ -22,6 +22,7 @@ export const outcomes = [
   "Generate content instantly with your own brand voice",
   "Integrate AI tools into any existing business workflow",
   "Save 10+ hours per week on repetitive tasks",
+  "Earn a certificate of completion to showcase your skills",
 ];
 
 // ── Module courses ─────────────────────────────────────────────────────────────

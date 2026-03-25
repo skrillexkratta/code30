@@ -260,6 +260,7 @@ export function LandingPage({ onGetAccess, onGoToDashboard }) {
             {[
               "All 3 AI tool modules (21 lessons)",
               "Step-by-step project code",
+              "Certificate of completion",
               "Lifetime access",
               "Future updates included",
             ].map(f => (
