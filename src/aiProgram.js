@@ -329,6 +329,110 @@ export function FloatingChat() {
           { q: "What z-index ensures the widget appears above other content?", opts: ["1", "100", "A high value like 9999", "It doesn't matter"], ans: 2, explanation: "A high z-index like 9999 ensures the chat widget appears above all other page elements." },
         ],
       },
+      {
+        day: 9, title: "Rate Limiting & Error Handling",
+        goal: "Protect your chatbot from abuse and handle API errors gracefully.",
+        lesson: "Production chatbots need rate limiting to prevent abuse and cost overruns. You also need to handle OpenAI errors gracefully — the API can time out, return errors, or hit your quota. A good error handler catches these and shows a friendly fallback message instead of crashing.",
+        challenge: "Add a per-user rate limiter (max 20 messages per hour) and wrap all API calls in try/catch with a friendly error message.",
+        code: `// Simple in-memory rate limiter (use Redis in production)
+const userMessageCounts = new Map();
+
+function checkRateLimit(userId) {
+  const now = Date.now();
+  const windowMs = 60 * 60 * 1000; // 1 hour
+  const maxMessages = 20;
+
+  if (!userMessageCounts.has(userId)) {
+    userMessageCounts.set(userId, []);
+  }
+
+  const timestamps = userMessageCounts.get(userId)
+    .filter(ts => now - ts < windowMs);
+
+  if (timestamps.length >= maxMessages) {
+    return { allowed: false, remaining: 0 };
+  }
+
+  timestamps.push(now);
+  userMessageCounts.set(userId, timestamps);
+  return { allowed: true, remaining: maxMessages - timestamps.length };
+}
+
+async function safeChatResponse(userId, message) {
+  const { allowed, remaining } = checkRateLimit(userId);
+
+  if (!allowed) {
+    return "You've sent too many messages. Please wait an hour and try again.";
+  }
+
+  try {
+    const res = await openai.chat.completions.create({
+      model: "gpt-3.5-turbo",
+      messages: [{ role: "user", content: message }],
+      timeout: 10000, // 10 second timeout
+    });
+    return res.choices[0].message.content;
+  } catch (err) {
+    if (err.status === 429) return "I'm busy right now — please try again in a moment.";
+    if (err.status === 500) return "OpenAI is having issues. Please try again shortly.";
+    console.error("Chat error:", err);
+    return "Something went wrong. Please try again.";
+  }
+}`,
+        quiz: [
+          { q: "Why do production chatbots need rate limiting?", opts: ["To make responses faster", "To prevent abuse and control API costs", "Because OpenAI requires it", "To improve accuracy"], ans: 1, explanation: "Without rate limits, a single user or bot could send thousands of requests, running up your OpenAI bill." },
+          { q: "What HTTP status code does OpenAI return when you hit your quota?", opts: ["400", "401", "429", "503"], ans: 2, explanation: "Status 429 means Too Many Requests — you've hit your rate or quota limit." },
+          { q: "What is a good fallback when the AI API fails?", opts: ["Crash the app", "Return a friendly error message to the user", "Retry 100 times", "Return an empty string"], ans: 1, explanation: "A try/catch block catches the error and shows a helpful message so the user isn't left confused." },
+        ],
+      },
+      {
+        day: 10, title: "Usage Analytics & Cost Control",
+        goal: "Track chatbot usage, monitor costs, and set spending alerts.",
+        lesson: "Every OpenAI API response includes a usage object with token counts. You can log these to Firestore to track how many tokens each user is consuming and calculate your costs. Setting monthly budget alerts in the OpenAI dashboard prevents surprise bills. For high-traffic bots, caching common questions saves both money and latency.",
+        challenge: "Log token usage per conversation to Firestore and build a simple admin function that calculates total cost for the month.",
+        code: `// Log token usage after every response
+async function chatWithTracking(userId, message) {
+  const res = await openai.chat.completions.create({
+    model: "gpt-3.5-turbo",
+    messages: [{ role: "user", content: message }],
+  });
+
+  const { prompt_tokens, completion_tokens, total_tokens } = res.usage;
+
+  // Log to Firestore
+  await db.collection("usage").add({
+    userId,
+    prompt_tokens,
+    completion_tokens,
+    total_tokens,
+    // GPT-3.5-turbo pricing (check OpenAI for current rates)
+    cost_usd: (prompt_tokens * 0.0000015) + (completion_tokens * 0.000002),
+    timestamp: new Date(),
+  });
+
+  return res.choices[0].message.content;
+}
+
+// Admin: calculate monthly cost
+async function getMonthlyCost() {
+  const startOfMonth = new Date();
+  startOfMonth.setDate(1);
+  startOfMonth.setHours(0, 0, 0, 0);
+
+  const snapshot = await db.collection("usage")
+    .where("timestamp", ">=", startOfMonth)
+    .get();
+
+  const total = snapshot.docs.reduce((sum, doc) => sum + doc.data().cost_usd, 0);
+  console.log(\`Month-to-date cost: $\${total.toFixed(4)}\`);
+  return total;
+}`,
+        quiz: [
+          { q: "Where do you find token usage in an OpenAI response?", opts: ["res.tokens", "res.usage", "res.data.usage", "res.choices[0].tokens"], ans: 1, explanation: "OpenAI includes a usage object in every response with prompt_tokens, completion_tokens, and total_tokens." },
+          { q: "What is the most effective way to reduce OpenAI costs for a chatbot?", opts: ["Use shorter system prompts", "Cache answers to frequently asked questions", "Disable streaming", "Use a longer context window"], ans: 1, explanation: "Caching answers to common questions means you only call the API once per unique question, not repeatedly." },
+          { q: "Where should you set hard spending limits for OpenAI?", opts: ["In your code", "In Vercel environment variables", "In the OpenAI dashboard under Billing", "In Firebase"], ans: 2, explanation: "The OpenAI dashboard lets you set hard monthly limits so you never exceed your budget." },
+        ],
+      },
     ],
   },
 
@@ -613,6 +717,211 @@ module.exports = async function handler(req, res) {
           { q: "What do Firestore security rules control?", opts: ["Who can access your Vercel deployment", "Who can read and write documents in Firestore", "OpenAI API usage", "Firebase Auth login methods"], ans: 1, explanation: "Firestore security rules define read/write permissions at the document and collection level." },
           { q: "What HTTP status code means 'too many requests'?", opts: ["400", "401", "403", "429"], ans: 3, explanation: "HTTP 429 Too Many Requests is the standard status for rate limiting." },
           { q: "Where should you set OpenAI spending limits?", opts: ["In your code", "In Vercel settings", "In the OpenAI dashboard under Billing", "In .env files"], ans: 2, explanation: "OpenAI's dashboard lets you set monthly hard limits to prevent unexpected charges." },
+        ],
+      },
+      {
+        day: 7, title: "AI Image Generation",
+        goal: "Add AI-generated images to your content using DALL·E.",
+        lesson: "OpenAI's DALL·E API lets you generate images from text prompts. For a content generator, this means you can automatically create social media images, blog headers, and ad visuals to go with the text you generate. You describe the image in a prompt and get back a URL to the generated image.",
+        challenge: "Extend your content generator to also produce a matching DALL·E image prompt and generate a cover image for each piece of content.",
+        code: `import OpenAI from "openai";
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+async function generateContentWithImage(topic, brandVoice) {
+  // Step 1: Generate the written content
+  const textRes = await openai.chat.completions.create({
+    model: "gpt-4o",
+    messages: [
+      { role: "system", content: brandVoice },
+      { role: "user",   content: \`Write a LinkedIn post about: \${topic}\` },
+    ],
+  });
+  const post = textRes.choices[0].message.content;
+
+  // Step 2: Generate a matching image
+  const imageRes = await openai.images.generate({
+    model:   "dall-e-3",
+    prompt:  \`Professional, modern illustration for a LinkedIn post about: \${topic}. Clean, minimal, no text.\`,
+    size:    "1792x1024",  // landscape — good for social media
+    quality: "standard",
+    n:       1,
+  });
+  const imageUrl = imageRes.data[0].url;
+
+  return { post, imageUrl };
+}
+
+// Usage:
+const { post, imageUrl } = await generateContentWithImage(
+  "AI automation for small businesses",
+  "You are a professional content writer. Tone: insightful and practical."
+);
+console.log(post);
+console.log("Image:", imageUrl);`,
+        quiz: [
+          { q: "Which OpenAI model generates images?", opts: ["GPT-4", "Whisper", "DALL·E 3", "Embeddings"], ans: 2, explanation: "DALL·E 3 is OpenAI's image generation model, accessed via openai.images.generate()." },
+          { q: "What does the DALL·E API return?", opts: ["A file download", "A URL to the generated image", "A base64 string only", "An image ID to fetch later"], ans: 1, explanation: "By default, DALL·E returns a URL. You can also request base64 format by setting response_format: 'b64_json'." },
+          { q: "What image size is best for social media landscape posts?", opts: ["1024x1024", "512x512", "1792x1024", "256x256"], ans: 2, explanation: "1792x1024 is the landscape format — ideal for LinkedIn, Twitter headers, and blog covers." },
+        ],
+      },
+      {
+        day: 8, title: "SEO-Optimised Content",
+        goal: "Generate content that ranks on Google by including keywords and structure.",
+        lesson: "SEO content follows a specific structure: a keyword-rich headline, meta description, H2 subheadings, and natural keyword placement in the body. You can prompt GPT to follow SEO best practices automatically. The model can also suggest target keywords for a topic and generate structured data (JSON-LD) for rich search results.",
+        challenge: "Build a function that takes a topic and returns a full SEO blog post with a title, meta description, keyword suggestions, and structured H2 sections.",
+        code: `async function generateSEOPost(topic) {
+  const res = await openai.chat.completions.create({
+    model: "gpt-4o",
+    messages: [
+      {
+        role: "system",
+        content: \`You are an SEO content expert. Always respond with valid JSON.\`,
+      },
+      {
+        role: "user",
+        content: \`Write an SEO-optimised blog post about: "\${topic}".
+Return JSON with this exact structure:
+{
+  "title": "keyword-rich H1 title",
+  "metaDescription": "150-160 char meta description with primary keyword",
+  "keywords": ["keyword1", "keyword2", "keyword3", "keyword4", "keyword5"],
+  "sections": [
+    { "h2": "Subheading", "content": "2-3 paragraphs of content" }
+  ],
+  "wordCount": 800
+}\`,
+      },
+    ],
+    response_format: { type: "json_object" },
+  });
+
+  return JSON.parse(res.choices[0].message.content);
+}
+
+const post = await generateSEOPost("AI tools for freelancers");
+console.log(\`Title: \${post.title}\`);
+console.log(\`Keywords: \${post.keywords.join(", ")}\`);
+console.log(\`Sections: \${post.sections.length}\`);`,
+        quiz: [
+          { q: "What is a meta description used for?", opts: ["It styles the page header", "It appears in search results below the title", "It tells the browser the charset", "It sets the page language"], ans: 1, explanation: "The meta description appears in Google search results as the snippet under the page title — it affects click-through rate." },
+          { q: "How do you tell GPT to always return JSON?", opts: ["Add 'JSON only' to the system prompt", "Use response_format: { type: 'json_object' }", "Parse the result manually", "Use model: 'gpt-4-json'"], ans: 1, explanation: "Setting response_format: { type: 'json_object' } forces the model to return valid JSON every time." },
+          { q: "What is the ideal length for a meta description?", opts: ["50-80 characters", "100-120 characters", "150-160 characters", "200+ characters"], ans: 2, explanation: "Google typically shows 150-160 characters in search results. Shorter gets cut off or padded; longer gets truncated." },
+        ],
+      },
+      {
+        day: 9, title: "Content Templates Library",
+        goal: "Build a reusable library of prompt templates for different content types.",
+        lesson: "Professional content generators use a library of battle-tested templates rather than writing prompts from scratch each time. Each template has a name, category, required variables, and a prompt string with placeholders. Users pick a template, fill in the variables, and get consistent output. This is how agencies build scalable content systems.",
+        challenge: "Create a TEMPLATES array with at least 5 content templates (LinkedIn post, cold email, product description, Twitter thread, blog intro) and build a function that fills in any template from user inputs.",
+        code: `const TEMPLATES = [
+  {
+    id:       "linkedin-post",
+    name:     "LinkedIn Post",
+    category: "Social Media",
+    variables: ["topic", "audience", "tone"],
+    prompt: \`Write a LinkedIn post about {{topic}} for {{audience}}.
+Tone: {{tone}}. Include a hook, 3 key insights, and a call to action.
+Use short paragraphs. Max 250 words.\`,
+  },
+  {
+    id:       "cold-email",
+    name:     "Cold Outreach Email",
+    category: "Email",
+    variables: ["prospect_name", "company", "pain_point", "solution"],
+    prompt: \`Write a short cold email to {{prospect_name}} at {{company}}.
+Their pain point: {{pain_point}}.
+Our solution: {{solution}}.
+Max 100 words. Subject line included. Friendly, not salesy.\`,
+  },
+  {
+    id:       "product-description",
+    name:     "Product Description",
+    category: "E-commerce",
+    variables: ["product_name", "key_features", "target_buyer"],
+    prompt: \`Write a compelling product description for {{product_name}}.
+Key features: {{key_features}}.
+Target buyer: {{target_buyer}}.
+Include benefits (not just features). Max 120 words.\`,
+  },
+];
+
+function fillTemplate(templateId, variables) {
+  const template = TEMPLATES.find(t => t.id === templateId);
+  if (!template) throw new Error(\`Template '\${templateId}' not found\`);
+
+  let prompt = template.prompt;
+  for (const [key, value] of Object.entries(variables)) {
+    prompt = prompt.replaceAll(\`{{\${key}}}\`, value);
+  }
+  return prompt;
+}
+
+// Usage:
+const prompt = fillTemplate("cold-email", {
+  prospect_name: "Sarah",
+  company:       "GrowthCo",
+  pain_point:    "spending hours writing personalised emails",
+  solution:      "our AI email tool that writes them in seconds",
+});`,
+        quiz: [
+          { q: "Why use templates instead of writing prompts from scratch each time?", opts: ["Templates are faster to type", "They give consistent, predictable output and save time", "OpenAI requires templates", "Templates use fewer tokens"], ans: 1, explanation: "Tested templates produce reliable results and can be reused across clients and campaigns without quality variation." },
+          { q: "What does replaceAll() do in the template fill function?", opts: ["Replaces only the first match", "Replaces every occurrence of the placeholder with the variable value", "Deletes the variable", "Formats the string as JSON"], ans: 1, explanation: "replaceAll() replaces every instance of the placeholder (e.g. {{topic}}) with the provided value throughout the prompt." },
+          { q: "What should a good prompt template always specify?", opts: ["Just the topic", "Format, tone, length, and audience", "Only the word count", "The model name"], ans: 1, explanation: "Effective templates constrain format, tone, length, and audience so the AI produces consistent professional output every time." },
+        ],
+      },
+      {
+        day: 10, title: "Bulk Export & Content Calendar",
+        goal: "Generate a full week of content in one click and export to CSV.",
+        lesson: "The most powerful feature of a content generator is bulk creation — generating an entire week or month of content in one run. You loop over topics, call the AI for each, collect results, then export everything to a CSV file the user can upload directly to their scheduling tool (Buffer, Hootsuite, etc.).",
+        challenge: "Build a generateWeek() function that produces 7 social posts from a list of topics and exports them as a downloadable CSV file.",
+        code: `import { createObjectCsvWriter } from "csv-writer";
+
+async function generateWeek(topics, brandVoice) {
+  console.log(\`Generating \${topics.length} posts...\`);
+  const posts = [];
+
+  for (const [i, topic] of topics.entries()) {
+    console.log(\`[\${i + 1}/\${topics.length}] \${topic}\`);
+
+    const res = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        { role: "system", content: brandVoice },
+        { role: "user",   content: \`Write a LinkedIn post about: \${topic}. Max 200 words.\` },
+      ],
+    });
+
+    posts.push({
+      date:     getDateDaysFromNow(i),  // schedule one per day
+      topic,
+      content:  res.choices[0].message.content,
+      platform: "LinkedIn",
+      status:   "scheduled",
+    });
+
+    // Small delay to avoid rate limits
+    await new Promise(r => setTimeout(r, 500));
+  }
+
+  // Export to CSV
+  const writer = createObjectCsvWriter({
+    path: "content-calendar.csv",
+    header: ["date", "topic", "content", "platform", "status"].map(id => ({ id, title: id.toUpperCase() })),
+  });
+  await writer.writeRecords(posts);
+  console.log(\`✅ Exported \${posts.length} posts to content-calendar.csv\`);
+  return posts;
+}
+
+function getDateDaysFromNow(days) {
+  const d = new Date();
+  d.setDate(d.getDate() + days);
+  return d.toISOString().split("T")[0];
+}`,
+        quiz: [
+          { q: "Why add a 500ms delay between API calls in a loop?", opts: ["To look more human", "To avoid hitting OpenAI's rate limits", "It's required by the API", "To reduce token usage"], ans: 1, explanation: "OpenAI enforces rate limits (requests per minute). A small delay between calls prevents 429 errors during bulk generation." },
+          { q: "What is a CSV file used for in a content calendar?", opts: ["To store images", "To schedule posts in tools like Buffer and Hootsuite", "To compress content", "To encrypt the post data"], ans: 1, explanation: "Most social scheduling tools (Buffer, Hootsuite, Later) accept CSV uploads for bulk scheduling — making export very valuable." },
+          { q: "What does createObjectCsvWriter do?", opts: ["Reads a CSV file", "Creates and writes JavaScript objects as rows in a CSV file", "Converts CSV to JSON", "Uploads CSV to cloud storage"], ans: 1, explanation: "csv-writer's createObjectCsvWriter maps JavaScript object arrays to CSV rows — each object property becomes a column." },
         ],
       },
     ],
@@ -930,6 +1239,178 @@ console.log("Campaign launched! Check your dashboard for stats.");`,
           { q: "What is the most common reason emails land in spam?", opts: ["Sending too slowly", "Unverified sending domain and poor sender reputation", "HTML formatting", "Subject line length"], ans: 1, explanation: "Email deliverability depends primarily on domain verification (SPF, DKIM, DMARC) and sender reputation." },
           { q: "What should you test before a real campaign?", opts: ["Nothing — just send it", "Full end-to-end flow with test contacts first", "Only the subject line", "Just check env vars"], ans: 1, explanation: "Always run the complete flow with real test contacts before launching to your actual list." },
           { q: "What does enrollContact() do?", opts: ["Sends the first email immediately", "Creates all scheduled emails in the queue", "Signs up the contact in Firebase Auth", "Adds the contact to a mailing list only"], ans: 1, explanation: "enrollContact() creates all 3 (or more) queued email documents with their send_after timestamps." },
+        ],
+      },
+      {
+        day: 8, title: "A/B Testing Email Subject Lines",
+        goal: "Use AI to generate subject line variants and track which performs best.",
+        lesson: "A/B testing means sending two versions of an email to different groups and measuring which gets more opens. AI can generate multiple compelling subject line variants instantly — you then split your list and track open rates. The winning subject line tells you exactly what resonates with your audience.",
+        challenge: "Build a function that generates 5 subject line variants for an email using GPT, randomly assigns each contact to a variant, and tracks which variant each contact received.",
+        code: `// Generate subject line variants with AI
+async function generateSubjectVariants(emailContent, count = 5) {
+  const res = await openai.chat.completions.create({
+    model: "gpt-4o",
+    messages: [
+      { role: "system", content: "You are an email marketing expert. Return only valid JSON." },
+      { role: "user", content: \`Generate \${count} different subject lines for this email.
+Each should use a different angle: curiosity, benefit, urgency, question, social proof.
+Email content: \${emailContent.slice(0, 500)}
+Return JSON: { "variants": ["subject1", "subject2", ...] }\` },
+    ],
+    response_format: { type: "json_object" },
+  });
+
+  return JSON.parse(res.choices[0].message.content).variants;
+}
+
+// Assign contacts to variants and track
+async function sendABTest(contacts, emailContent) {
+  const subjects = await generateSubjectVariants(emailContent);
+  console.log("Testing subjects:", subjects);
+
+  for (const contact of contacts) {
+    // Randomly assign to a variant
+    const variantIndex = Math.floor(Math.random() * subjects.length);
+    const subject = subjects[variantIndex];
+
+    await resend.emails.send({
+      from:    "hello@yourdomain.com",
+      to:      contact.email,
+      subject: subject,
+      html:    emailContent,
+      headers: { "X-AB-Variant": String(variantIndex) },
+    });
+
+    // Save which variant this contact received
+    await db.collection("ab_tests").add({
+      contactId: contact.id,
+      variantIndex,
+      subject,
+      sentAt: new Date(),
+      opened: false, // updated by webhook later
+    });
+  }
+}`,
+        quiz: [
+          { q: "What is the goal of A/B testing email subject lines?", opts: ["To send more emails", "To find which subject line gets the most opens", "To reduce bounce rates", "To personalise the email body"], ans: 1, explanation: "A/B testing identifies what language and style resonates most with your audience, improving open rates over time." },
+          { q: "How do you track which variant a contact received?", opts: ["By guessing later", "By saving the variant assignment to a database when sending", "Email clients report this automatically", "By asking the contact"], ans: 1, explanation: "You must save the variant assignment at send time — correlate it with open tracking data to determine the winner." },
+          { q: "What email metric does subject line testing primarily improve?", opts: ["Click-through rate", "Bounce rate", "Open rate", "Unsubscribe rate"], ans: 2, explanation: "The subject line is what recipients see before opening — so it directly impacts open rate above anything else." },
+        ],
+      },
+      {
+        day: 9, title: "Unsubscribe & List Management",
+        goal: "Handle unsubscribes correctly and keep your list clean and compliant.",
+        lesson: "Every email you send must have a working unsubscribe link — this is legally required in most countries (CAN-SPAM, GDPR). When someone unsubscribes, you must immediately stop sending to them. You also need to handle bounced email addresses (invalid addresses that return delivery failures) by removing them from your list automatically.",
+        challenge: "Build an unsubscribe API endpoint that marks contacts as unsubscribed in Firestore and update your cron job to skip unsubscribed contacts.",
+        code: `// api/unsubscribe.js — Vercel serverless function
+import { initFirebaseAdmin } from "../lib/firebase-admin";
+
+export default async function handler(req, res) {
+  if (req.method !== "GET") return res.status(405).end();
+
+  const { token } = req.query;
+  if (!token) return res.status(400).send("Invalid unsubscribe link.");
+
+  const db = initFirebaseAdmin();
+
+  try {
+    // Find contact by their unsubscribe token
+    const snapshot = await db.collection("contacts")
+      .where("unsubscribeToken", "==", token)
+      .limit(1)
+      .get();
+
+    if (snapshot.empty) return res.status(404).send("Link not found.");
+
+    const contactDoc = snapshot.docs[0];
+    await contactDoc.ref.update({
+      unsubscribed:   true,
+      unsubscribedAt: new Date(),
+    });
+
+    // Also delete any pending emails for this contact
+    const pending = await db.collection("email_queue")
+      .where("contactId", "==", contactDoc.id)
+      .where("status", "==", "pending")
+      .get();
+
+    const batch = db.batch();
+    pending.docs.forEach(doc => batch.delete(doc.ref));
+    await batch.commit();
+
+    res.status(200).send(\`
+      <html><body style="font-family:sans-serif;padding:40px;text-align:center">
+        <h2>You've been unsubscribed</h2>
+        <p>You will no longer receive emails from us.</p>
+      </body></html>
+    \`);
+  } catch (err) {
+    console.error("Unsubscribe error:", err);
+    res.status(500).send("Something went wrong.");
+  }
+}
+
+// Generate an unsubscribe URL when enrolling a contact:
+function generateUnsubscribeUrl(contactId) {
+  const token = crypto.randomUUID();
+  return { token, url: \`\${process.env.APP_URL}/api/unsubscribe?token=\${token}\` };
+}`,
+        quiz: [
+          { q: "Why is a working unsubscribe link legally required?", opts: ["It's not legally required", "Laws like CAN-SPAM and GDPR require it to protect recipients", "Email providers block emails without it", "It improves deliverability only"], ans: 1, explanation: "CAN-SPAM (US) and GDPR (EU) legally require a clear, working unsubscribe mechanism in every commercial email." },
+          { q: "What should happen immediately when someone unsubscribes?", opts: ["Send them a confirmation sequence", "Stop all future emails and mark them as unsubscribed", "Archive their data for 6 months", "Reduce email frequency first"], ans: 1, explanation: "You must honour unsubscribes immediately — continuing to send after an unsubscribe request violates anti-spam laws." },
+          { q: "What is a 'bounced' email?", opts: ["An email that was opened", "An email that failed to deliver because the address is invalid", "An email that was marked as spam", "An email sent to the wrong person"], ans: 1, explanation: "A bounce means the email could not be delivered. Hard bounces (invalid address) should be removed from your list immediately." },
+        ],
+      },
+      {
+        day: 10, title: "Performance Dashboard & Reports",
+        goal: "Build a real-time dashboard showing campaign stats: opens, clicks, and revenue.",
+        lesson: "A great email tool shows you what's working. You pull stats from Firestore — total sent, opens, clicks, unsubscribes — and calculate key metrics like open rate and click-through rate (CTR). Displaying these in a clean dashboard makes your tool feel professional and gives users the insights they need to improve their campaigns.",
+        challenge: "Build a getCampaignStats() function that returns open rate, CTR, and unsubscribe rate for any campaign, and render the results in a simple stats grid.",
+        code: `// Calculate stats for a campaign
+async function getCampaignStats(campaignId) {
+  const sentSnap = await db.collection("email_queue")
+    .where("campaignId", "==", campaignId)
+    .where("status", "==", "sent")
+    .get();
+
+  const openSnap = await db.collection("email_events")
+    .where("campaignId", "==", campaignId)
+    .where("event", "==", "open")
+    .get();
+
+  const clickSnap = await db.collection("email_events")
+    .where("campaignId", "==", campaignId)
+    .where("event", "==", "click")
+    .get();
+
+  const unsubSnap = await db.collection("contacts")
+    .where("campaignId", "==", campaignId)
+    .where("unsubscribed", "==", true)
+    .get();
+
+  const sent        = sentSnap.size;
+  const opens       = openSnap.size;
+  const clicks      = clickSnap.size;
+  const unsubscribes = unsubSnap.size;
+
+  return {
+    sent,
+    opens,
+    clicks,
+    unsubscribes,
+    openRate:        sent > 0 ? ((opens / sent) * 100).toFixed(1) + "%" : "0%",
+    clickRate:       opens > 0 ? ((clicks / opens) * 100).toFixed(1) + "%" : "0%",
+    unsubscribeRate: sent > 0 ? ((unsubscribes / sent) * 100).toFixed(2) + "%" : "0%",
+  };
+}
+
+// Example output:
+// { sent: 250, opens: 87, clicks: 34, unsubscribes: 2,
+//   openRate: "34.8%", clickRate: "39.1%", unsubscribeRate: "0.80%" }`,
+        quiz: [
+          { q: "What is a good email open rate benchmark?", opts: ["5-10%", "15-25%", "50-60%", "80%+"], ans: 1, explanation: "Industry average open rates are 15-25%. Above 30% is excellent. Below 15% suggests subject line or deliverability issues." },
+          { q: "How is click-through rate (CTR) calculated?", opts: ["Clicks divided by emails sent", "Clicks divided by emails opened", "Opens divided by emails sent", "Clicks divided by total contacts"], ans: 1, explanation: "CTR is typically clicks / opens — it measures how compelling your email content is to people who actually opened it." },
+          { q: "What does a high unsubscribe rate (above 0.5%) indicate?", opts: ["The campaign is very successful", "The audience is not a good fit or the content is irrelevant", "Your email design needs improvement", "You need to send more emails"], ans: 1, explanation: "High unsubscribe rates signal a mismatch between your content and audience. Review targeting, frequency, and relevance." },
         ],
       },
     ],

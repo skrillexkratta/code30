@@ -176,7 +176,7 @@ export function LandingPage({ onGetAccess, onGoToDashboard }) {
           <div style={{ maxWidth: 860, margin: "0 auto", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 24, textAlign: "center" }}>
             {[
               { num: "500+",    label: "Students enrolled" },
-              { num: "21",      label: "Hands-on lessons" },
+              { num: "30",      label: "Hands-on lessons" },
               { num: "10+ hrs", label: "Saved per week" },
               { num: "4.9★",   label: "Average rating" },
             ].map(s => (
@@ -441,7 +441,7 @@ export function LandingPage({ onGetAccess, onGoToDashboard }) {
 
           <div style={{ marginTop: 20, display: "flex", flexDirection: "column", gap: 10 }}>
             {[
-              "All 3 AI tool modules (21 lessons)",
+              "All 3 AI tool modules (30 lessons)",
               "Step-by-step project source code",
               "Certificate of completion",
               "Lifetime access + future updates",
