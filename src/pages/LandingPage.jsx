@@ -153,7 +153,7 @@ export function LandingPage({ onGetAccess, onGoToDashboard }) {
               </span>
               <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
                 <CheckCircle size={13} style={{ color: "var(--accent)" }} />
-                30-day money-back guarantee
+                7-day money-back guarantee
               </span>
             </div>
           )}
@@ -391,7 +391,7 @@ export function LandingPage({ onGetAccess, onGoToDashboard }) {
           />
           <FAQItem
             q="Is there a refund policy?"
-            a="Yes. If you're not satisfied within 30 days of purchase, contact us for a full refund — no questions asked. We stand behind the quality of this program."
+            a="Yes. If you're not satisfied within 7 days of purchase, contact us for a full refund — no questions asked. We stand behind the quality of this program."
           />
           <FAQItem
             q="What is included in the one-time payment?"
@@ -445,7 +445,7 @@ export function LandingPage({ onGetAccess, onGoToDashboard }) {
               "Step-by-step project source code",
               "Certificate of completion",
               "Lifetime access + future updates",
-              "30-day money-back guarantee",
+              "7-day money-back guarantee",
             ].map(f => (
               <div key={f} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, color: "var(--text-muted)", justifyContent: "center" }}>
                 <CheckCircle size={13} style={{ color: "var(--accent)", flexShrink: 0 }} />
@@ -466,7 +466,7 @@ export function LandingPage({ onGetAccess, onGoToDashboard }) {
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--text-dim)" }}>
               <CheckCircle size={13} style={{ color: "var(--accent)" }} />
-              30-day guarantee
+              7-day guarantee
             </div>
           </div>
         </div>
@@ -475,9 +475,9 @@ export function LandingPage({ onGetAccess, onGoToDashboard }) {
         <div style={{ marginTop: 24, padding: "16px 20px", background: "rgba(77,240,255,0.04)", border: "1px solid rgba(77,240,255,0.12)", borderRadius: 12, display: "flex", gap: 12, alignItems: "flex-start", textAlign: "left" }}>
           <Shield size={18} style={{ color: "var(--accent)", flexShrink: 0, marginTop: 2 }} />
           <div>
-            <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 4 }}>30-Day Money-Back Guarantee</div>
+            <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 4 }}>7-Day Money-Back Guarantee</div>
             <p style={{ fontSize: 13, color: "var(--text-muted)", lineHeight: 1.6, margin: 0 }}>
-              If you go through the program and feel it wasn't worth it, just send us a message within 30 days and we'll refund you in full. No questions asked.
+              If you go through the program and feel it wasn't worth it, just send us a message within 7 days and we'll refund you in full. No questions asked.
             </p>
           </div>
         </div>
